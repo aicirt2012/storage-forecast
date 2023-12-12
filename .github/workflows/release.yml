@@ -1,0 +1,55 @@
+name: Release
+on:
+  push:
+    tags:
+    - 'v[0-9]+.[0-9]+.[0-9]+'
+jobs:
+  release:
+    name: Release
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install
+      run: |
+        sudo apt-get install mingw-w64  
+        rustup target add x86_64-pc-windows-gnu
+    - name: Run tests
+      run: cargo test --verbose
+    - name: Run Clippy      
+      run: cargo clippy --all-targets --all-features
+    - name: Build Win
+      run: cargo build --release --target x86_64-pc-windows-gnu
+    - name: Build Unix
+      run: cargo build --release
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    - name: Upload Unix Asset 
+      id: upload-release-asset-unix
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
+        asset_path: target/release/storage-forecast
+        asset_name: storage-forecast
+        asset_content_type: application/zip
+    - name: Upload Win Asset
+      id: upload-release-asset-win
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} 
+        asset_path: target/x86_64-pc-windows-gnu/release/storage-forecast.exe
+        asset_name: storage-forecast.exe
+        asset_content_type: application/zip

@@ -1,0 +1,37 @@
+name: Build
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+env:
+  CARGO_TERM_COLOR: always  
+  RUSTFLAGS: "-Dwarnings" # Make sure CI fails on all warnings, including Clippy lints
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install
+      run: |
+        sudo apt-get install mingw-w64  
+        rustup target add x86_64-pc-windows-gnu
+    - name: Run tests
+      run: cargo test --verbose
+    - name: Run Clippy      
+      run: cargo clippy --all-targets --all-features
+    - name: Build Win
+      run: cargo build --release --target x86_64-pc-windows-gnu
+    - name: Archive Win artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: Storage-forcast.exe
+        path: target/x86_64-pc-windows-gnu/release/storage-forecast.exe
+    - name: Build Unix
+      run: cargo build --release
+    - name: Archive Unix artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: Storage-forcast
+        path: target/release/storage-forecast
